@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pokemon Champions - Damage Calculator</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Champions Calc</h1>
+            <div class="tabs">
+                <button class="tab-btn active" data-target="party-tab">パーティ登録</button>
+                <button class="tab-btn" data-target="calc-tab">ダメージ計算</button>
+            </div>
+        </header>
+
+        <main class="app-content">
+            <!-- パーティ登録タブ -->
+            <section id="party-tab" class="tab-content active">
+                <p class="section-desc">味方のポケモンを6匹登録します。（Lv.50, 個体値V固定）</p>
+                <div id="party-list" class="party-list">
+                    <!-- JSで動的に6匹分生成 -->
+                </div>
+            </section>
+
+            <!-- ダメージ計算タブ -->
+            <section id="calc-tab" class="tab-content">
+                <p class="section-desc">相手の攻撃ステータスと技を設定して、パーティの被ダメージを計算します。</p>
+                <div class="card opponent-card">
+                    <h2 class="card-title">相手の攻撃</h2>
+                    
+                    <div class="form-group">
+                        <label>相手のポケモン</label>
+                        <div class="custom-dropdown" id="dropdown-opp-pokemon">
+                            <div class="dropdown-header" id="header-opp-pokemon">
+                                <span class="dropdown-text" id="text-opp-pokemon">--選択してください--</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="dropdown-list" id="list-opp-pokemon"></div>
+                        </div>
+                        <input type="hidden" id="opp-pokemon" value="">
+                    </div>
+
+                    <div class="form-group">
+                        <label>育成状況 (攻撃ステータス)</label>
+                        <select id="opp-build">
+                            <option value="max_plus" selected>特化 (能力ポイント32 ＋ 性格1.1倍)</option>
+                            <option value="max">全振り (能力ポイント32 ＋ 性格等倍)</option>
+                            <option value="zero">無振り (能力ポイント0 ＋ 性格等倍)</option>
+                            <option value="min">最低 (能力ポイント0 ＋ 性格0.9倍)</option>
+                        </select>
+                    </div>
+
+                    <div class="stat-grid">
+                        <div class="form-group">
+                            <label>使用する技</label>
+                            <div class="custom-dropdown" id="dropdown-opp-move">
+                                <div class="dropdown-header" id="header-opp-move">
+                                    <span class="dropdown-text" id="text-opp-move">--選択してください--</span>
+                                    <span class="dropdown-arrow">▼</span>
+                                </div>
+                                <div class="dropdown-list" id="list-opp-move"></div>
+                            </div>
+                            <input type="hidden" id="opp-move" value="">
+                        </div>
+                        <div class="form-group">
+                            <label>アタッカーの特性</label>
+                            <select id="opp-ability">
+                                <option value="none">特性なし・該当なし</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="stat-grid">
+                        <div class="form-group">
+                            <label>持ち物などの補正</label>
+                            <select id="opp-modifier">
+                                <option value="1.0" selected>なし (1.0倍)</option>
+                                <option value="1.2">タイプ強化アイテム等 (1.2倍)</option>
+                                <option value="1.3">いのちのたま等 (1.3倍)</option>
+                                <option value="1.5">こだわりハチマキ・メガネ等 (1.5倍)</option>
+                                <option value="2.0">ちからもち・ピュアパワー等 (2.0倍)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>能力ランク上昇</label>
+                            <select id="opp-rank">
+                                <option value="6">+6</option>
+                                <option value="5">+5</option>
+                                <option value="4">+4</option>
+                                <option value="3">+3</option>
+                                <option value="2">+2 (剣舞等)</option>
+                                <option value="1">+1 (竜舞等)</option>
+                                <option value="0" selected>±0</option>
+                                <option value="-1">-1 (威嚇等)</option>
+                                <option value="-2">-2</option>
+                                <option value="-3">-3</option>
+                                <option value="-4">-4</option>
+                                <option value="-5">-5</option>
+                                <option value="-6">-6</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card results-card">
+                    <h2 class="card-title">被ダメージ一覧</h2>
+                    <div id="damage-results" class="damage-results">
+                        <!-- JSで動的に生成 -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- 汎用モーダルやトースト用のコンテナ -->
+    <div id="toast-container"></div>
+
+    <!-- ポケモン編集モーダル -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content card">
+            <div class="modal-header">
+                <h2>ポケモン編集</h2>
+                <button id="close-modal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body-content">
+                <!-- JSでフォームを生成 -->
+            </div>
+            <div class="modal-footer">
+                <button id="save-pokemon" class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="moves_db.js"></script>
+    <script src="pokemon_db.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
