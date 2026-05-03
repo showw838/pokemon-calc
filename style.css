@@ -113,6 +113,16 @@ body {
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
 }
 
+.opponent-card {
+    position: relative;
+    z-index: 20;
+}
+
+.results-card {
+    position: relative;
+    z-index: 10;
+}
+
 .party-item {
     display: flex;
     justify-content: space-between;
@@ -458,7 +468,7 @@ select option {
     top: 100%;
     left: 0;
     width: 100%;
-    max-height: 250px;
+    max-height: 500px;
     overflow-y: auto;
     background: var(--bg-color);
     border: 1px solid var(--card-border);
