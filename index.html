@@ -47,7 +47,10 @@
                     </div>
 
                     <div class="form-group">
-                        <label>育成状況 (攻撃ステータス)</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label style="margin-bottom: 0;">攻撃ステータス</label>
+                            <div id="opp-mega-container" class="mega-container" style="display: none;"></div>
+                        </div>
                         <select id="opp-build">
                             <option value="max_plus" selected>特化 (能力ポイント32 ＋ 性格1.1倍)</option>
                             <option value="max">全振り (能力ポイント32 ＋ 性格等倍)</option>
