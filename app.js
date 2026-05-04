@@ -112,6 +112,7 @@ function populateSelects() {
     });
     updateCustomDropdown('opp-pokemon', pokeOptions, "", true);
     updateOpponentMoves();
+    updateMegaSwitches();
 }
 
 function updateOpponentMoves() {
@@ -180,6 +181,7 @@ function setupModal() {
 function setupCalcEvents() {
     document.getElementById('opp-pokemon').addEventListener('change', () => {
         updateOpponentMoves();
+        updateMegaSwitches();
         renderDamage();
     });
     ['opp-build', 'opp-move', 'opp-modifier', 'opp-rank', 'opp-ability'].forEach(id => {
@@ -401,24 +403,14 @@ function openModal(index) {
             </div>
             <input type="hidden" id="edit-db-select" value="">
         </div>
-        <div class="form-group">
-            <label>ポケモン名</label>
-            <input type="text" id="edit-name" class="form-control" value="${p.name}">
-        </div>
+        <input type="hidden" id="edit-name" value="${p.name}">
+        <input type="hidden" id="edit-type1" value="${p.type1}">
+        <input type="hidden" id="edit-type2" value="${p.type2}">
+
         <div class="form-group">
             <label>
                 <input type="checkbox" id="edit-mega" ${p.isMega ? 'checked' : ''}> メガシンカ
             </label>
-        </div>
-        <div class="stat-grid">
-            <div class="form-group">
-                <label>タイプ1</label>
-                <select id="edit-type1" class="form-control">${typeOptions}</select>
-            </div>
-            <div class="form-group">
-                <label>タイプ2</label>
-                <select id="edit-type2" class="form-control">${typeOptions}</select>
-            </div>
         </div>
         
         <div class="form-group">
@@ -443,25 +435,29 @@ function openModal(index) {
             </div>
         </div>
 
+        <input type="hidden" id="edit-base-hp" value="${p.base.hp}">
+        <input type="hidden" id="edit-base-def" value="${p.base.def}">
+        <input type="hidden" id="edit-base-spd" value="${p.base.spd}">
+
         <div class="stat-row">
-            <div class="stat-header"><span>HP</span> <span>種族値 / 能力ポイント</span></div>
-            <div class="stat-inputs">
-                <input type="number" id="edit-base-hp" value="${p.base.hp}" min="1" max="255">
-                <input type="number" id="edit-ev-hp" value="${p.ev.hp}" min="0" max="32">
+            <div class="stat-header"><span>HP</span> <span>実数値 / 能力ポイント</span></div>
+            <div class="stat-inputs" style="display: flex; align-items: center; gap: 8px;">
+                <span id="display-actual-hp" style="font-weight: bold; width: 60px; text-align: center; color: var(--primary-color);">---</span>
+                <input type="number" id="edit-ev-hp" value="${p.ev.hp}" min="0" max="32" style="flex: 1;">
             </div>
         </div>
         <div class="stat-row" style="margin-top: 0.5rem;">
-            <div class="stat-header"><span>防御</span> <span>種族値 / 能力ポイント</span></div>
-            <div class="stat-inputs">
-                <input type="number" id="edit-base-def" value="${p.base.def}" min="1" max="255">
-                <input type="number" id="edit-ev-def" value="${p.ev.def}" min="0" max="32">
+            <div class="stat-header"><span>防御</span> <span>実数値 / 能力ポイント</span></div>
+            <div class="stat-inputs" style="display: flex; align-items: center; gap: 8px;">
+                <span id="display-actual-def" style="font-weight: bold; width: 60px; text-align: center; color: var(--primary-color);">---</span>
+                <input type="number" id="edit-ev-def" value="${p.ev.def}" min="0" max="32" style="flex: 1;">
             </div>
         </div>
         <div class="stat-row" style="margin-top: 0.5rem;">
-            <div class="stat-header"><span>特防</span> <span>種族値 / 能力ポイント</span></div>
-            <div class="stat-inputs">
-                <input type="number" id="edit-base-spd" value="${p.base.spd}" min="1" max="255">
-                <input type="number" id="edit-ev-spd" value="${p.ev.spd}" min="0" max="32">
+            <div class="stat-header"><span>特防</span> <span>実数値 / 能力ポイント</span></div>
+            <div class="stat-inputs" style="display: flex; align-items: center; gap: 8px;">
+                <span id="display-actual-spd" style="font-weight: bold; width: 60px; text-align: center; color: var(--primary-color);">---</span>
+                <input type="number" id="edit-ev-spd" value="${p.ev.spd}" min="0" max="32" style="flex: 1;">
             </div>
         </div>
     `;
@@ -479,7 +475,14 @@ function openModal(index) {
             };
         })
     );
-    updateCustomDropdown('edit-db-select', dbOptions, "", true);
+    
+    let currentDbIdx = "";
+    if (p.name !== "未設定") {
+        const foundIdx = POKEMON_DB.findIndex(poke => poke.name === p.name);
+        if (foundIdx !== -1) currentDbIdx = foundIdx;
+    }
+    
+    updateCustomDropdown('edit-db-select', dbOptions, currentDbIdx, true);
     
     document.getElementById('edit-db-select').addEventListener('change', (e) => {
         const val = e.target.value;
@@ -491,6 +494,7 @@ function openModal(index) {
         document.getElementById('edit-base-hp').value = dbPoke.base.hp;
         document.getElementById('edit-base-def').value = dbPoke.base.def;
         document.getElementById('edit-base-spd').value = dbPoke.base.spd;
+        updateActualStatsDisplay();
     });
 
     document.getElementById('edit-type1').value = p.type1;
@@ -498,7 +502,42 @@ function openModal(index) {
     document.getElementById('edit-nature-plus').value = p.nature.plus;
     document.getElementById('edit-nature-minus').value = p.nature.minus;
 
+    ['edit-ev-hp', 'edit-ev-def', 'edit-ev-spd', 'edit-nature-plus', 'edit-nature-minus'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateActualStatsDisplay);
+        document.getElementById(id).addEventListener('change', updateActualStatsDisplay);
+    });
+
+    updateActualStatsDisplay();
+
     document.getElementById('edit-modal').classList.add('active');
+}
+
+function updateActualStatsDisplay() {
+    const baseHp = parseInt(document.getElementById('edit-base-hp').value) || 100;
+    const baseDef = parseInt(document.getElementById('edit-base-def').value) || 100;
+    const baseSpd = parseInt(document.getElementById('edit-base-spd').value) || 100;
+
+    const evHp = parseInt(document.getElementById('edit-ev-hp').value) || 0;
+    const evDef = parseInt(document.getElementById('edit-ev-def').value) || 0;
+    const evSpd = parseInt(document.getElementById('edit-ev-spd').value) || 0;
+
+    const naturePlus = document.getElementById('edit-nature-plus').value;
+    const natureMinus = document.getElementById('edit-nature-minus').value;
+
+    const defNature = naturePlus === 'def' ? 1.1 : (natureMinus === 'def' ? 0.9 : 1);
+    const spdNature = naturePlus === 'spd' ? 1.1 : (natureMinus === 'spd' ? 0.9 : 1);
+
+    const actualHp = calculateStat(baseHp, evHp, 1, true);
+    const actualDef = calculateStat(baseDef, evDef, defNature, false);
+    const actualSpd = calculateStat(baseSpd, evSpd, spdNature, false);
+
+    const hpSpan = document.getElementById('display-actual-hp');
+    const defSpan = document.getElementById('display-actual-def');
+    const spdSpan = document.getElementById('display-actual-spd');
+
+    if (hpSpan) hpSpan.textContent = actualHp;
+    if (defSpan) defSpan.textContent = actualDef;
+    if (spdSpan) spdSpan.textContent = actualSpd;
 }
 
 function closeModal() {
@@ -640,6 +679,131 @@ function updateCustomDropdown(id, options, defaultVal = "", enableSearch = false
         textSpan.innerHTML = options[0] ? options[0].html : '-- 選択してください --';
         hiddenInput.value = options[0] ? options[0].value : "";
     }
+}
+
+function updateMegaSwitches() {
+    const container = document.getElementById('opp-mega-container');
+    const idx = document.getElementById('opp-pokemon').value;
+    if (!container || idx === "") {
+        if(container) container.style.display = 'none';
+        return;
+    }
+
+    const currentPokemon = POKEMON_DB[idx];
+    let baseName = currentPokemon.name;
+    let isCurrentlyMega = false;
+    let currentMegaType = "";
+
+    // イルカマンのフォルムチェンジ処理
+    let isCurrentlyMighty = false;
+    if (baseName === "イルカマン(ナイーブ)" || baseName === "イルカマン(マイティ)") {
+        isCurrentlyMighty = baseName === "イルカマン(マイティ)";
+        
+        const naiveIdx = POKEMON_DB.findIndex(p => p.name === "イルカマン(ナイーブ)");
+        const mightyIdx = POKEMON_DB.findIndex(p => p.name === "イルカマン(マイティ)");
+        
+        if (naiveIdx !== -1 && mightyIdx !== -1) {
+            container.style.display = 'flex';
+            container.innerHTML = `
+                <label class="mega-switch-wrapper">
+                    <span class="mega-switch-label">マイティチェンジ</span>
+                    <div class="mega-switch">
+                        <input type="checkbox" id="mighty-toggle" ${isCurrentlyMighty ? 'checked' : ''}>
+                        <span class="mega-slider"></span>
+                    </div>
+                </label>
+            `;
+            document.getElementById('mighty-toggle').addEventListener('change', (e) => {
+                changeOppPokemon(e.target.checked ? mightyIdx : naiveIdx);
+            });
+            return; // イルカマンの場合はここで終了
+        }
+    }
+
+    if (baseName.startsWith("メガ")) {
+        isCurrentlyMega = true;
+        baseName = baseName.replace(/^メガ/, '');
+        if (baseName.endsWith("X")) {
+            currentMegaType = "X";
+            baseName = baseName.slice(0, -1);
+        } else if (baseName.endsWith("Y")) {
+            currentMegaType = "Y";
+            baseName = baseName.slice(0, -1);
+        }
+    }
+
+    const megaXIdx = POKEMON_DB.findIndex(p => p.name === "メガ" + baseName + "X");
+    const megaYIdx = POKEMON_DB.findIndex(p => p.name === "メガ" + baseName + "Y");
+    const megaNormalIdx = POKEMON_DB.findIndex(p => p.name === "メガ" + baseName && !p.name.endsWith("X") && !p.name.endsWith("Y"));
+    const baseIdx = POKEMON_DB.findIndex(p => p.name === baseName);
+
+    if (baseIdx === -1) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.innerHTML = '';
+    
+    if (megaXIdx !== -1 && megaYIdx !== -1) {
+        container.style.display = 'flex';
+        container.innerHTML = `
+            <label class="mega-switch-wrapper">
+                <span class="mega-switch-label">メガX</span>
+                <div class="mega-switch">
+                    <input type="checkbox" id="mega-toggle-x" ${currentMegaType === 'X' ? 'checked' : ''}>
+                    <span class="mega-slider"></span>
+                </div>
+            </label>
+            <label class="mega-switch-wrapper">
+                <span class="mega-switch-label">メガY</span>
+                <div class="mega-switch">
+                    <input type="checkbox" id="mega-toggle-y" ${currentMegaType === 'Y' ? 'checked' : ''}>
+                    <span class="mega-slider"></span>
+                </div>
+            </label>
+        `;
+
+        document.getElementById('mega-toggle-x').addEventListener('change', (e) => {
+            changeOppPokemon(e.target.checked ? megaXIdx : baseIdx);
+        });
+
+        document.getElementById('mega-toggle-y').addEventListener('change', (e) => {
+            changeOppPokemon(e.target.checked ? megaYIdx : baseIdx);
+        });
+
+    } else if (megaNormalIdx !== -1) {
+        container.style.display = 'flex';
+        container.innerHTML = `
+            <label class="mega-switch-wrapper">
+                <span class="mega-switch-label">メガシンカ</span>
+                <div class="mega-switch">
+                    <input type="checkbox" id="mega-toggle-normal" ${isCurrentlyMega ? 'checked' : ''}>
+                    <span class="mega-slider"></span>
+                </div>
+            </label>
+        `;
+
+        document.getElementById('mega-toggle-normal').addEventListener('change', (e) => {
+            changeOppPokemon(e.target.checked ? megaNormalIdx : baseIdx);
+        });
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+function changeOppPokemon(idx) {
+    const hiddenInput = document.getElementById('opp-pokemon');
+    const textSpan = document.getElementById('text-opp-pokemon');
+    hiddenInput.value = idx;
+    
+    const list = document.getElementById('list-opp-pokemon');
+    const item = list.querySelector(`.dropdown-item[data-value="${idx}"]`);
+    if (item) {
+        textSpan.innerHTML = item.innerHTML;
+    }
+
+    const event = new Event('change');
+    hiddenInput.dispatchEvent(event);
 }
 
 // Close dropdowns when clicking outside
